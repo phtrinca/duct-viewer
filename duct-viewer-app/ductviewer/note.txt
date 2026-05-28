@@ -1,0 +1,2 @@
+# Add this line after app = FastAPI() in main.py
+# app.mount("/static", StaticFiles(directory="static"), name="static")
