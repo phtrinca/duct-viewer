@@ -1,5 +1,0 @@
-fetch('/static/drawings.json')
-  .then(r => r.json())
-  .then(rawDrawings => {
-    const allMarkers = {};
-    rawDrawings.forEach((d, di) => {
