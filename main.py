@@ -1,19 +1,38 @@
 import os, json
 from pathlib import Path
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-DATA_FILE = Path("data/drawings.json")
+def find_data():
+    candidates = [
+        Path("data/drawings.json"),
+        Path("/opt/render/project/src/data/drawings.json"),
+        Path(os.path.dirname(os.path.abspath(__file__))) / "data" / "drawings.json",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+@app.get("/debug")
+def debug():
+    return {
+        "cwd": os.getcwd(),
+        "file_location": os.path.abspath(__file__),
+        "data_exists": Path("data/drawings.json").exists(),
+        "all_json": [str(p) for p in Path(".").rglob("*.json")]
+    }
 
 @app.get("/api/drawings")
 def get_drawings():
-    if not DATA_FILE.exists():
-        return {"drawings": [], "markers": {}}
-    drawings = json.loads(DATA_FILE.read_text())
+    path = find_data()
+    if not path:
+        return JSONResponse({"drawings": [], "markers": {}})
+    drawings = json.loads(path.read_text())
     all_markers = {}
     for di, d in enumerate(drawings):
         for duct_id, pos in d["markers"].items():
@@ -22,7 +41,7 @@ def get_drawings():
             all_markers[duct_id].append({"x": pos["x"], "y": pos["y"], "di": di})
     return {
         "drawings": [{"name": d["name"], "img": d["img"], "count": d["count"]} for d in drawings],
-        "markers":  all_markers
+        "markers": all_markers
     }
 
 @app.get("/", response_class=HTMLResponse)
